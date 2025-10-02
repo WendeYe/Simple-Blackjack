@@ -28,4 +28,15 @@ def shuffleDeck(deck,serverseed,,clientseed,nonce)
   hex_hash = h.finalize().hex()
   shuffled_deck = deck[:]
   deck_size = len(shuffled_deck)
-  
+  #Implementation of fisher-yates shuffling algorithm, I used knowledge from: https://github.com/cynthiateeters/fisher-yates
+  for i in range(deck_size - 1,0,-1):
+    # we take 4 characters from the hash to minimize bias, we could've taken only 2 (that would be 255 cards representable, but we take more to minimise bias)
+    
+    hex_chunk = hex_hash[:4]
+    hex_hash = hex_hash[4:]
+    shuffleNum = int(hex_chunk, 16)
+    shuffleNum = shuffleNum % (i+1)
+    shuffled_deck[i], shuffled_deck[shuffleNum] = shuffled_deck[shuffleNum], shuffled_deck[i] # Here we swap the position of the current card with an unshuffled card
+    
+  return shuffled_deck
+    
