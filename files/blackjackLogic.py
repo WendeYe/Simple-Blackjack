@@ -39,4 +39,15 @@ def shuffleDeck(deck,serverseed,,clientseed,nonce)
     shuffled_deck[i], shuffled_deck[shuffleNum] = shuffled_deck[shuffleNum], shuffled_deck[i] # Here we swap the position of the current card with an unshuffled card
     
   return shuffled_deck
-    
+
+
+def drawCard():
+  # We get the card on top of the deck
+  card = deck[len(deck)-1]
+  deck.pop(len(deck)-1)
+  return card
+
+def hit(player_deck):
+  player_deck.append(drawcard())
+
+  
