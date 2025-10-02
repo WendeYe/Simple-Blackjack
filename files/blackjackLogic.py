@@ -47,7 +47,25 @@ def drawCard():
   deck.pop(len(deck)-1)
   return card
 
-def hit(player_deck):
-  player_deck.append(drawcard())
+def hit(hand):
+  hand.append(drawcard())
+
+def calculateValue(hand):
+  value = 0
+  aces = 0
+  card_values = {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "Jack": 10, "Queen": 10, "King": 10}
+  for card in hand:
+    val = card.split(" ")[0]
+    if val == "Ace":
+      aces = aces + 1
+    else:
+      value = card_values[val]
+  value = value + aces * 11
+  if value == 21 and ace_count = 1:
+    return "Blackjack"
+  while value > 21 and ace_count > 0:
+    value -= 10
+    ace_count -= 1
+return value
 
   
