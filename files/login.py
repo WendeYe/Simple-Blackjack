@@ -1,7 +1,8 @@
 # Implementation of a login function, that is also in charge of the creation of accounts
 import os
-import scrypt
 import json
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.kdf.scrypt import scrypt
 
 def find_user(usertofind):
     # check the json database we have for the existence of the username
