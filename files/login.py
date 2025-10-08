@@ -56,7 +56,14 @@ def register():
             next_id = max_id + 1
             # generated a salt of 32 bytes
             salt = os.urandom(32)
-            hashed_password = scrypt.hash(password.encode('utf-8'), salt,16384,8,1) # https://cryptobook.nakov.com/mac-and-key-derivation/scrypt, used parameters found on this website
+            kdf = Scrypt(
+            salt=salt,
+            length=32,
+            n=2**14,
+            r=8,
+            p=1,
+            )
+            hashed_password = kdf.derive(password)
             new_user = {
                 "id": next_id,
                 "username": username,
@@ -95,9 +102,15 @@ def register():
 
             salt = bytes.fromhex(salt_hex)
             hash = bytes.fromhex(hash_hex)
-            rehashed_password = scrypt.hash(password.encode('utf-8'), salt, 16384, 8, 1)
-
-            if hash == rehashed_password:
+            kdf = Scrypt(
+            salt=salt,
+            length=32,
+            n=2**14,
+            r=8,
+            p=1,
+            )
+            
+            if kdf.verify(password,hash):
                 print(f"Verified user, welcome {username}")
                 return True
             else:
