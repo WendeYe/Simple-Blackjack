@@ -2,7 +2,7 @@
 import os
 import json
 from cryptography.hazmat.primitives import hashes, hmac
-from cryptography.hazmat.primitives.kdf.scrypt import scrypt
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 def find_user(usertofind):
     # check the json database we have for the existence of the username
@@ -50,37 +50,58 @@ def register():
         password = input("Introduce your password, it must have length longer than 8, atleast 2 special characters: ")
         if len(password) > 8 and special_check(password):
             # Now we need to encrypt the password using scrypt and store it along with username
-            with open('users.json', 'r') as file:
-                data = json.load(file)
-            max_id = max(user['id'] for user in data['users'])
-            next_id = max_id + 1
-            # generated a salt of 32 bytes
-            salt = os.urandom(32)
-            kdf = Scrypt(
-            salt=salt,
-            length=32,
-            n=2**14,
-            r=8,
-            p=1,
-            )
-            hashed_password = kdf.derive(password)
-            new_user = {
-                "id": next_id,
-                "username": username,
-                "salt": salt.hex(),
-                "password_hash": hashed_password.hex()
-            }
-
-
-            with open('users.json', 'r') as file:
-                data = json.load(file)
-
-            data["users"].append(new_user)
-
-            with open('users.json','w') as file:
-                json.dump(data, file,indent=4)
-
-            print("Your registration was sucessful")
+            try:
+                with open('users.json', 'r') as file:
+                    data = json.load(file)
+                max_id = max(user['id'] for user in data['users'])
+                next_id = max_id + 1
+                # generated a salt of 16 bytes
+                salt = os.urandom(16)
+                kdf = Scrypt(
+                salt=salt,
+                length=32,
+                n=2**14,
+                r=8,
+                p=1,
+                )
+                hashed_password = kdf.derive(password.encode('utf-8'))
+                new_user = {
+                    "id": next_id,
+                    "username": username,
+                    "salt": salt.hex(),
+                    "password_hash": hashed_password.hex()
+                }
+    
+    
+                with open('users.json', 'r') as file:
+                    data = json.load(file)
+    
+                data["users"].append(new_user)
+    
+                with open('users.json','w') as file:
+                    json.dump(data, file,indent=4)
+    
+                print("Your registration was sucessful")
+                return True
+        except FileNotFoundError:
+            with open(DB_FILE, 'w') as file:
+                salt = os.urandom(16)
+                kdf = Scrypt(
+                    salt=salt,
+                    length=32,
+                    n=2**14,
+                    r=8,
+                    p=1,
+                )
+                hashed_password = kdf.derive(password.encode('utf-8'))
+                new_user = {
+                    "id": 1,
+                    "username": username,
+                    "salt": salt.hex(),
+                    "password_hash": hashed_password.hex()
+                }
+                json.dump({"users": [new_user]}, file, indent=4)
+            print("Your registration was successful!")
             return True
         else:
             print("Password does not meet requirements, try again!")
@@ -110,15 +131,13 @@ def register():
             p=1,
             )
             
-            if kdf.verify(password,hash):
-                print(f"Verified user, welcome {username}")
-                return True
-            else:
-                print("Invalid combination, username/password")
+            try:
+            kdf.verify(password.encode('utf-8'), stored_hash)
+            print(f"Verification successful. Welcome, {username}!")
+            return True
+            except Exception:
+                print("Invalid username or password.")
                 return False
-
-            # now we recalculate the hash using the salt and we compare them
-
         else:
-            print("Username/Password does not exist")
-            return False
+            print("Invalid username or password.")
+            return false
