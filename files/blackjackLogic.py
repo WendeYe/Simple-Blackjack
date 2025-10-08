@@ -19,7 +19,7 @@ def createDeck()
 ### Maybe i should make a diagram representing provably fair
 
 
-def shuffleDeck(deck,serverseed,,clientseed,nonce)
+def shuffleDeck(deck,serverseed,clientseed,nonce)
   # now we combine both serverseed,clientseed and the nonce together
   # if both serverseed and clientseed haven't changed the nonce increases by 1
   message = f"{client_seed}-{nonce}".encode('utf-8')
@@ -53,6 +53,7 @@ def hit(hand):
 def calculateValue(hand):
   value = 0
   aces = 0
+  blackjack = False
   card_values = {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "Jack": 10, "Queen": 10, "King": 10}
   for card in hand:
     val = card.split(" ")[0]
@@ -62,10 +63,72 @@ def calculateValue(hand):
       value = card_values[val]
   value = value + aces * 11
   if value == 21 and ace_count = 1:
-    return "Blackjack"
+    blackjack = True
+    return value, aces, blackjack
   while value > 21 and ace_count > 0:
     value -= 10
     ace_count -= 1
-return value
+return value, aces, blackjack
+
+def gameStart():
+  nonce = 0
+  gameEnd = False
+  while gameEnd == False:
+    bet = double(input("How much money do you want to lose?: "))
+    playerHand = []
+    dealerHand = []
+    deck = createDeck()
+    serverSeed = os.urandom(16)
+    userSeed = input("Introduce your seed: ")
+    nonce += 1
+    deck = shuffleDeck(deck,serverSeed,userSeed,nonce)
+    playerHand.append(drawCard())
+    dealerHand.append(drawCard())
+    playerHand.append(drawCard())
+    (playerVal,aces) = calculateValue(playerHand)
+    (dealerVal,acesDealer) = calculateValue(playerHand)
+    print(f"The value of your cards is: {playerVal} and this are your cards: ")
+    for item in playerHand:
+      print(item)
+    print(f"This is the dealer's card: ")
+    for item in dealerHand:
+      print(item)
+    stand = False
+    while playerVal <22 and stand == False:
+      action = input("Do you want to Hit or Stand?: (H/S)":
+      if action == "H":
+        hit(playerHand)
+        (playerVal,aces,blackjackPlayer) = calculateValue(playerHand)
+        print(f"The value of your cards is: {playerVal} and this are your cards: ")
+        for item in playerHand:
+        print(item)
+        else:
+          stand = True
+    
+    while dealerVal < 16:
+      hit(dealerHand)
+      (dealerVal,acesDealer,blackjackDealer) = calculateValue(dealerHand)
+      print(f"These are the dealer's cards: ")
+      for item in dealerHand:
+      print(item)
+
+  if playerVal == 21 and dealerVal == 21:
+    if blackjack and not blackjackDealer:
+      playerWon = True
+    if not blackjack and blackjackDealer:
+      playerWon = False
+    else:
+      draw = True
+
+  if playerVal > dealerVal
+    
+        
+  
+
+    
+    endState = input("Do you want to end? (Y/N)")
+    if endState == "Y":
+      gameEnd = True
+    
 
   
