@@ -72,8 +72,9 @@ return value, aces, blackjack
 
 def gameStart():
   nonce = 0
-  gameEnd = False
-  while gameEnd == False:
+  dealerWon = False
+  draw = False
+  playerWon = False
     bet = double(input("How much money do you want to lose?: "))
     playerHand = []
     dealerHand = []
@@ -114,21 +115,27 @@ def gameStart():
 
   if playerVal == 21 and dealerVal == 21:
     if blackjack and not blackjackDealer:
-      playerWon = True
+      return '4'
     if not blackjack and blackjackDealer:
-      playerWon = False
+      dealerWon = True
     else:
       draw = True
 
-  if playerVal > dealerVal
-    
-        
-  
+  if playerVal > dealerVal and playerVal <= 21:
+    playerWon = True
+  elif playerVal < dealerVal and dealerVal <= 21:
+    dealerWon = True
+  elif playerVal == dealerVal:
+    draw = True
 
-    
-    endState = input("Do you want to end? (Y/N)")
-    if endState == "Y":
-      gameEnd = True
+
+    if playerWon:
+      return '1'
+    if dealerWon:
+      return '2'
+    if draw:
+      return '3'
+
     
 
   
