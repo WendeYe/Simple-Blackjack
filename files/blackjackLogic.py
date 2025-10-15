@@ -11,7 +11,7 @@ def createDeck():
     # just a loop that takes every number and adds it to the deck alongisde each suit
     initial_deck = [f"{value} of {suit}" for value in values for suit in suits]
     # we create 4 decks
-    deck = intial_deck * 4
+    deck = initial_deck * 4
     return deck
 
 
@@ -23,8 +23,8 @@ def createDeck():
 def shuffleDeck(deck, serverseed, clientseed, nonce):
     # now we combine both serverseed,clientseed and the nonce together
     # if both serverseed and clientseed haven't changed the nonce increases by 1
-    message = f"{client_seed}-{nonce}".encode('utf-8')
-    h = hmac.HMAC(server_seed.encode('utf-8'), hashes.SHA512())
+    message = f"{clientseed}-{nonce}".encode('utf-8')
+    h = hmac.HMAC(serverseed, hashes.SHA512())
     h.update(message)
     hex_hash = h.finalize().hex()
     shuffled_deck = deck[:]
@@ -32,7 +32,11 @@ def shuffleDeck(deck, serverseed, clientseed, nonce):
     # Implementation of fisher-yates shuffling algorithm, I used knowledge from: https://github.com/cynthiateeters/fisher-yates
     for i in range(deck_size - 1, 0, -1):
         # we take 4 characters from the hash to minimize bias, we could've taken only 2 (that would be 255 cards representable, but we take more to minimise bias)
-
+        if len(hex_hash) < 4:
+            # Generate a new hash by hashing the previous one to extend the random stream
+            h_new = hmac.HMAC(serverseed, hashes.SHA512())
+            h_new.update(hex_hash.encode('utf-8')) # Use the remainder of the old hash as new message
+            hex_hash += h_new.finalize().hex()
         hex_chunk = hex_hash[:4]
         hex_hash = hex_hash[4:]
         shuffleNum = int(hex_chunk, 16)
@@ -51,7 +55,7 @@ def drawCard():
 
 
 def hit(hand):
-    hand.append(drawcard())
+    hand.append(drawCard())
 
 
 def calculateValue(hand):
@@ -65,7 +69,7 @@ def calculateValue(hand):
         if val == "Ace":
             aces = aces + 1
         else:
-            value = card_values[val]
+            value += card_values[val]
     value = value + aces * 11
     if value == 21 and aces == 1:
         blackjack = True
@@ -75,18 +79,36 @@ def calculateValue(hand):
         aces -= 1
     return value, aces, blackjack
 
+def winCheck(playerVal, dealerVal, blackjack, blackjackDealer):
+
+    if playerVal > 21:
+        return 2
+
+    if dealerVal > 21:
+        return 1
+
+    if blackjack and not blackjackDealer:
+        return 4
+    if blackjackDealer and not blackjack:
+        return 2
+
+
+    if playerVal > dealerVal:
+        return 1
+    elif dealerVal > playerVal:
+        return 2
+    else: # playerVal == dealerVal
+        return 3
 
 def gameStart():
+    global deck
+    deck = createDeck()
     nonce = 0
-    dealerWon = False
-    draw = False
-    playerWon = False
     blackjackDealer = False
     blackjackPlayer = False
-    bet = double(input("How much money do you want to lose?: "))
+    bet = int(input("How much money do you want to lose?: "))
     playerHand = []
     dealerHand = []
-    deck = createDeck()
     serverSeed = os.urandom(16)
     userSeed = input("Introduce your seed: ")
     nonce += 1
@@ -94,12 +116,12 @@ def gameStart():
     playerHand.append(drawCard())
     dealerHand.append(drawCard())
     playerHand.append(drawCard())
-    (playerVal, aces) = calculateValue(playerHand)
-    (dealerVal, acesDealer) = calculateValue(playerHand)
+    (playerVal, aces ,blackjackPlayer ) = calculateValue(playerHand)
+    (dealerVal, acesDealer, blackjackDealer) = calculateValue(dealerHand)
     print(f"The value of your cards is: {playerVal} and this are your cards: ")
     for item in playerHand:
         print(item)
-    print(f"This is the dealer's card: ")
+    print(f"His hand value is {dealerVal} and these are the dealer's cards: ")
     for item in dealerHand:
         print(item)
     stand = False
@@ -113,36 +135,10 @@ def gameStart():
                 print(item)
         else:
             stand = True
-
     while dealerVal < 16:
         hit(dealerHand)
         (dealerVal, acesDealer, blackjackDealer) = calculateValue(dealerHand)
-        print(f"These are the dealer's cards: ")
+        print(f"His hand value is {dealerVal} and these are the dealer's cards: ")
         for item in dealerHand:
             print(item)
-
-
-    if playerVal == 21 and dealerVal == 21:
-        if blackjack and not blackjackDealer:
-            return 4
-        if not blackjack and blackjackDealer:
-            dealerWon = True
-        else:
-            draw = True
-    
-    if playerVal > dealerVal and playerVal <= 21:
-        playerWon = True
-    elif playerVal < dealerVal and dealerVal <= 21:
-        dealerWon = True
-    elif playerVal == dealerVal:
-        draw = True
-    
-        if playerWon:
-            return 1
-        if dealerWon:
-            return 2
-        if draw:
-            return 3
-
-
-
+    return winCheck(playerVal, dealerVal, blackjackPlayer, blackjackDealer)
