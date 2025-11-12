@@ -66,11 +66,26 @@ def register():
                     p=1,
                 )
                 hashed_password = kdf.derive(password.encode('utf-8'))
+                kdf2 = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=key_salt,
+                iterations=1_200_000,
+                )
+                key = kdf2.derive(password.encode('utf-8'))
+                p_balance = 0
+                aesgcm = AESGCM(key)
+                nonce = os.urandom(16)
+                encrypted_balance = aesgcm.encrypt(nonce, p_balance, None)
                 new_user = {
-                    "id": next_id,
+                    "id": 1,
                     "username": username,
                     "salt": salt.hex(),
-                    "password_hash": hashed_password.hex()
+                    "password_hash": hashed_password.hex(),
+                    "key_salt": key_salt.hex(),
+                    "encrypted_balance": encrypted_balance,
+                    "bal_nonce": nonce
+
                 }
 
                 with open('users.json', 'r') as file:
@@ -133,6 +148,16 @@ def login():
     if userdata:
         salt_hex = userdata['salt']
         hash_hex = userdata['password_hash']
+        saltkey_hex = userdata['key_salt']
+        key_salt = bytes.fromhex(saltkey_hex)
+        kdf2 = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=key_salt,
+        iterations=1_200_000,
+        )
+        key = kdf2.derive(password.encode('utf-8'))
+        nonce = userdata['nonce']
 
         # as we stored it in hax, we need to convert it to bytes
 
@@ -147,13 +172,13 @@ def login():
         )
 
         try:
-            kdf.verify(password.encode('utf-8'), stored_hash)
-        print(f"Verification successful. Welcome, {username}!")
-        return True
-        except Exception:
-        print("Invalid username or password.")
-        return False
+            kdf.verify(password.encode('utf-8'), hash)
+            print(f"Verification successful. Welcome, {username}!")
+            return True, key
+            except Exception:
+            print("Invalid username or password.")
+            return False, None
 
         else:
             print("Invalid username or password.")
-            return False
+            return False, None
