@@ -179,14 +179,14 @@ def login():
             # This is the actual password verification
             kdf.verify(password.encode('utf-8'), stored_hash)
             print(f"Verification successful. Welcome, {username}!")
-            return (True, key)
+            return (userdata, key)
         
         except InvalidKey: 
             print("Invalid username or password.")
-            return (False, None) 
+            return (None, None) 
         except Exception:
             print("Invalid username or password.")
-            return (False, None)
+            return (None, None)
 
     else:
         print("Invalid username or password.")
