@@ -1,8 +1,10 @@
-# Implementation of a login function, that is also in charge of the creation of accounts
 import os
 import json
-from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.exceptions import InvalidKey
 
 
 def find_user(usertofind):
