@@ -9,6 +9,7 @@ from login import login, register
 import pki
 
 DB_FILE = 'users.json'
+CA_CERT_FILE = 'cacert.pem' # The path to your CA's public certificate
 
 def load_db():
     try:
@@ -48,7 +49,7 @@ def encrypt_balance(balance_float, password_derived_key):
         aesgcm = AESGCM(password_derived_key)
         new_nonce = os.urandom(16)
         new_ciphertext = aesgcm.encrypt(new_nonce, balance_bytes, None)
-    
+
         return new_nonce.hex(), new_ciphertext.hex()
     except Exception as e:
         print(f"Error occurred during encryption: {e}")
@@ -63,7 +64,7 @@ def update_user_in_db(username, new_nonce_hex, new_ciphertext_hex, new_signature
         return
 
     data = load_db()
-    
+
     user_found = False
     for user in data["users"]:
         if user["username"] == username:
@@ -76,13 +77,20 @@ def update_user_in_db(username, new_nonce_hex, new_ciphertext_hex, new_signature
         save_db(data)
     else:
         print(f"Error: Could not find user {username} to save balance.")
-        
+
 def main_menu():
-    
+
     logged_in_user = None
     current_key = None      # AES key for balance
     current_rsa_key = None  # RSA key for signing
     current_balance = None
+
+    try:
+        ca_cert = pki.load_certificate_from_pem_file(CA_CERT_FILE)
+        print("CA Root Certificate loaded.")
+    except FileNotFoundError:
+        print(f"FATAL ERROR: CA certificate '{CA_CERT_FILE}' not found. The application cannot run.")
+        return
 
     while True:
         if logged_in_user:
@@ -96,16 +104,16 @@ def main_menu():
             if choice == '1':
                 print("Starting Blackjack...")
                 current_balance = play_blackjack_game(current_balance)
-                
+
             elif choice == '2':
                 print(f"Your current balance is: {current_balance}")
-            
+
             elif choice == '3':
                 print(f"Saving balance for {logged_in_user['username']}...")
-                
+
                 # 1. Encrypt new balance
                 new_nonce, new_ciphertext = encrypt_balance(current_balance, current_key)
-                
+
                 # 2. Sign the new balance
                 new_signature = None
                 if new_nonce: # Only sign if encryption succeeded
@@ -119,77 +127,88 @@ def main_menu():
 
                 # 3. Update database with new data and signature
                 update_user_in_db(logged_in_user['username'], new_nonce, new_ciphertext, new_signature)
-                
+
                 print(f"Logging out {logged_in_user['username']}...")
                 logged_in_user = None
                 current_key = None
                 current_rsa_key = None
                 current_balance = None
-            
+
             else:
                 print("Invalid choice.")
-                
+
         else:
-            
+
             print("\n--- Welcome to Blackjack ---")
             print("1. Login")
             print("2. Register")
             print("q. Quit")
             print("----------------------------")
-            
+
             choice = input("Please enter your choice (1, 2, or q): ").strip().lower()
 
             if choice == '1':
                 # Login now returns THREE items
-                user_data_from_login, key_from_login, rsa_key_from_login = login() 
-                
-                if user_data_from_login:
-                    logged_in_user = user_data_from_login
-                    current_key = key_from_login
-                    current_rsa_key = rsa_key_from_login
-                    
-                    # Decrypt balance as before
-                    current_balance = decrypt_balance(logged_in_user, current_key)
-                    
-                    if current_balance is not None:
-                        # # verify signature
-                        print("Verifying balance integrity...")
-                        last_sig = logged_in_user.get("last_balance_signature") # .get avoids error if key missing
-                        
-                        if last_sig is None:
-                            print("First login, no signature to verify. Welcome!")
-                        else:
-                            try:
-                                pem_public = logged_in_user['rsa_public_key_pem']
-                                public_key = pki.load_public_key(pem_public)
-                                message_to_verify = f"{logged_in_user['username']}:{current_balance}".encode('utf-8')
-                                
-                                if pki.verify_signature(public_key, message_to_verify, last_sig):
-                                    print("SUCCESS: Balance integrity verified.")
-                                else:
-                                    print("WARNING: Balance signature is INVALID!!!")
-                                    print("Your account data may have been tampered with")
-                            except Exception as e:
-                                print(f"Could not verify signature: {e}")
+                user_data_from_login, key_from_login, rsa_key_from_login = login()
 
-                        print(f"Login successful. Your balance of {current_balance} has been loaded.")
+                if user_data_from_login:
+                    print("Login successful. Verifying user certificate...")
+                    try:
+                        # Load the user's certificate from the DB
+                        user_cert = pki.load_certificate_from_pem_string(user_data_from_login['user_certificate_pem'])
                         
-                    else:
-                        print("Login successful, but could not load balance. Logging out.")
-                        logged_in_user = None
-                        current_key = None
-                        current_rsa_key = None
+                        # Verify the user's certificate is signed by the CA
+                        is_user_cert_valid = pki.verify_certificate_signature(user_cert, ca_cert.public_key())
+
+                        if is_user_cert_valid:
+                            print("SUCCESS: User certificate is valid and signed by our CA.")
+                            
+                            logged_in_user = user_data_from_login
+                            current_key = key_from_login
+                            current_rsa_key = rsa_key_from_login
+                            
+                            # Decrypt balance as before
+                            current_balance = decrypt_balance(logged_in_user, current_key)
+                            
+                            if current_balance is not None:
+                                # verify signature
+                                print("Verifying balance integrity...")
+                                last_sig = logged_in_user.get("last_balance_signature") # .get avoids error if key missing
+                                
+                                if last_sig is None:
+                                    print("First login, no signature to verify. Welcome!")
+                                else:
+                                    # Extract the now-trusted public key from the certificate
+                                    user_public_key = user_cert.public_key()
+                                    message_to_verify = f"{logged_in_user['username']}:{current_balance}".encode('utf-8')
+                                    
+                                    if pki.verify_signature(user_public_key, message_to_verify, last_sig):
+                                        print("SUCCESS: Balance integrity verified.")
+                                    else:
+                                        print("WARNING: Balance signature is INVALID!!!")
+                                        print("Your account data may have been tampered with")
+
+                                print(f"Login successful. Your balance of {current_balance} has been loaded.")
+                            else:
+                                print("Login successful, but could not load balance. Logging out.")
+                                logged_in_user = None
+
+                        else:
+                            print("ERROR: User certificate verification failed! It may be tampered with or not signed by our CA.")
+
+                    except Exception as e:
+                        print(f"An unexpected error occurred during certificate verification: {e}")
                 else:
                     print("Login failed. Please try again.")
-                    
+
 
             elif choice == '2':
                 register()
 
             elif choice == 'q':
                 print("Goodbye!")
-                break 
-                
+                break
+
             else:
                 print("Invalid choice. Please select 1, 2, or q.")
 
