@@ -79,7 +79,7 @@ def register():
                 key = kdf2.derive(password.encode('utf-8'))
                 p_balance = str(0.0).encode('utf-8') 
                 aesgcm = AESGCM(key)
-                nonce = os.urandom(16) # Your original 16-byte nonce
+                nonce = os.urandom(16)
                 encrypted_balance = aesgcm.encrypt(nonce, p_balance, None)
                 
                 new_user = {
@@ -136,7 +136,7 @@ def register():
                     json.dump({"users": [new_user]}, file, indent=4)
                 print("Your registration was successful!")
                 passwordcondition = True
-                return True # Kept your original return
+                return True
         else:
             print("Password does not meet requirements, try again!")
 
