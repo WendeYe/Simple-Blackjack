@@ -85,3 +85,61 @@ def verify_signature(public_key, data_bytes, signature_hex):
     except Exception:
         # InvalidSignature
         return False
+
+# Certificate function
+
+def generate_csr(private_key, username):
+    """
+    Generates a Certificate Signing Request (CSR)
+    """
+    subject = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, u"ES"),
+        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Madrid"),
+        x509.NameAttribute(NameOID.LOCALITY_NAME, u"Leganes"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Wende & Kevin"),
+        x509.NameAttribute(NameOID.COMMON_NAME, username),
+    ])
+
+    # Generate the CSR
+    csr = x509.CertificateSigningRequestBuilder().subject_name(
+        subject
+    ).sign(private_key, hashes.SHA256())
+    
+    return csr
+
+def serialize_csr_to_pem(csr):
+    """Serializes a CSR object to PEM format."""
+    return csr.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+
+def load_certificate_from_pem_file(filepath):
+    """
+    Loads an X.509 certificate from a PEM file.
+    """
+    with open(filepath, "rb") as cert_file:
+        return x509.load_pem_x509_certificate(cert_file.read())
+
+def load_certificate_from_pem_string(pem_string):
+    """
+    Loads an X.509 certificate from a PEM string.
+    """
+    return x509.load_pem_x509_certificate(pem_string.encode('utf-8'))
+
+def verify_certificate_signature(cert_to_verify, issuer_public_key):
+    """
+    Verifies that a certificate was correctly signed by the issuer.
+    """
+    try:
+        # PKCS1v15 as you've told us int he guide
+        padding_algo = asym_padding.PKCS1v15()
+        issuer_public_key.verify(
+            signature=cert_to_verify.signature,
+            data=cert_to_verify.tbs_certificate_bytes,
+            padding=padding_algo,
+            algorithm=cert_to_verify.signature_hash_algorithm
+        )
+        return True
+    except Exception as e:
+        print(f"Certificate verification failed: {e}")
+        return False
+
+
