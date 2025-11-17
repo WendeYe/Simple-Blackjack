@@ -1,7 +1,7 @@
 # Implementation of RSA functions
 
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -97,9 +97,8 @@ def generate_csr(private_key, username):
     """
     subject = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, u"ES"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Madrid"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, u"Leganes"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Wende & Kevin"),
+        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"MADRID"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"UC3M"),
         x509.NameAttribute(NameOID.COMMON_NAME, username),
     ])
 
@@ -133,7 +132,7 @@ def verify_certificate_signature(cert_to_verify, issuer_public_key):
     """
     try:
         # PKCS1v15 as you've told us int he guide
-        padding_algo = asym_padding.PKCS1v15()
+        padding_algo = padding.PKCS1v15()
         issuer_public_key.verify(
             signature=cert_to_verify.signature,
             data=cert_to_verify.tbs_certificate_bytes,
