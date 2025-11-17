@@ -9,7 +9,7 @@ from login import login, register
 import pki
 
 DB_FILE = 'users.json'
-CA_CERT_FILE = 'aclcert.pem' # The path to your CA's public certificate
+CA_CERT_FILE = 'ac1cert.pem' # The path to your CA's public certificate
 
 def load_db():
     try:
