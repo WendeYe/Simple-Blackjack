@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.exceptions import InvalidKey
+import pki
 
 DB_FILE = 'users.json'
 
@@ -69,7 +70,7 @@ def register():
                     p=1,
                 )
                 hashed_password = kdf.derive(password.encode('utf-8'))
-                key_salt = os.urandom(16) 
+                key_salt = os.urandom(16)
                 kdf2 = PBKDF2HMAC(
                     algorithm=hashes.SHA256(),
                     length=32,
@@ -77,19 +78,27 @@ def register():
                     iterations=1_200_000,
                 )
                 key = kdf2.derive(password.encode('utf-8'))
-                p_balance = str(0.0).encode('utf-8') 
+                p_balance = str(0.0).encode('utf-8')
                 aesgcm = AESGCM(key)
-                nonce = os.urandom(16)
+                nonce = os.urandom(16) # 16 byte nonce
                 encrypted_balance = aesgcm.encrypt(nonce, p_balance, None)
                 
+                # PKI
+                rsa_private, rsa_public = pki.generate_rsa_keypair()
+                pem_public = pki.serialize_public_key(rsa_public)
+                pem_private_encrypted = pki.serialize_private_key(rsa_private, password.encode('utf-8'))
+                
                 new_user = {
-                    "id": next_id, 
+                    "id": next_id,
                     "username": username,
-                    "salt": salt.hex(), 
-                    "password_hash": hashed_password.hex(), 
-                    "key_salt": key_salt.hex(), 
-                    "encrypted_balance": encrypted_balance.hex(), 
-                    "bal_nonce": nonce.hex() 
+                    "salt": salt.hex(),
+                    "password_hash": hashed_password.hex(),
+                    "key_salt": key_salt.hex(),
+                    "encrypted_balance": encrypted_balance.hex(),
+                    "bal_nonce": nonce.hex(),
+                    "rsa_public_key_pem": pem_public,
+                    "rsa_private_key_pem": pem_private_encrypted,
+                    "last_balance_signature": None
                 }
 
 
@@ -98,7 +107,7 @@ def register():
                 with open('users.json', 'w') as file:
                     json.dump(data, file, indent=4)
                 print("Your registration was sucessful")
-                passwordcondition = True 
+                passwordcondition = True
                 return True
             
             except FileNotFoundError:
@@ -120,10 +129,17 @@ def register():
                         iterations=1_200_000,
                     )
                     key = kdf2.derive(password.encode('utf-8'))
-                    p_balance = str(0.0).encode('utf-8') 
+                    p_balance = str(0.0).encode('utf-8')
                     aesgcm = AESGCM(key)
-                    nonce = os.urandom(16)
+                    nonce = os.urandom(16) #16-byte nonce
                     encrypted_balance = aesgcm.encrypt(nonce, p_balance, None)
+                    print("Generating RSA key pair for digital signatures...")
+                    rsa_private, rsa_public = pki.generate_rsa_keypair()
+                    pem_public = pki.serialize_public_key(rsa_public)
+                    pem_private_encrypted = pki.serialize_private_key(rsa_private, password.encode('utf-8'))
+                    print("RSA keys generated and encrypted.")
+
+
                     new_user = {
                         "id": 1, # First user
                         "username": username,
@@ -131,7 +147,10 @@ def register():
                         "password_hash": hashed_password.hex(),
                         "key_salt": key_salt.hex(),
                         "encrypted_balance": encrypted_balance.hex(),
-                        "bal_nonce": nonce.hex() 
+                        "bal_nonce": nonce.hex(),
+                        "rsa_public_key_pem": pem_public,
+                        "rsa_private_key_pem": pem_private_encrypted,
+                        "last_balance_signature": None
                     }
                     json.dump({"users": [new_user]}, file, indent=4)
                 print("Your registration was successful!")
@@ -142,12 +161,13 @@ def register():
 
 
 # the login function should be easy, we ask for a user, a password, and then we use scrypt and the salt (corresponding to the username) we have to hash said password
-# and then we check the database to see if they both match, i can see why this method is secure, because the attacker couldn't know the salt because this all would be done server side
+
 
 def login():
     username = input("Introduce an username: ")
     password = input("Introduce the password: ")
     userdata = find_user(username)
+    
     if userdata:
         salt_hex = userdata['salt']
         hash_hex = userdata['password_hash']
@@ -164,6 +184,7 @@ def login():
             iterations=1_200_000,
         )
         key = kdf2.derive(password.encode('utf-8'))
+        
         salt = bytes.fromhex(salt_hex)
         stored_hash = bytes.fromhex(hash_hex)
         
@@ -179,15 +200,20 @@ def login():
             # This is the actual password verification
             kdf.verify(password.encode('utf-8'), stored_hash)
             print(f"Verification successful. Welcome, {username}!")
-            return (userdata, key)
+            print("Loading and decrypting your private key...")
+            pem_private_encrypted = userdata['rsa_private_key_pem']
+            rsa_private_key = pki.load_private_key(pem_private_encrypted, password.encode('utf-8'))
+            print("Private key loaded.")
+
+            return (userdata, key, rsa_private_key) 
         
-        except InvalidKey: 
+        except InvalidKey:
             print("Invalid username or password.")
-            return (None, None) 
-        except Exception:
-            print("Invalid username or password.")
-            return (None, None)
+            return (None, None, None) 
+        except Exception as e:
+            print(f"Invalid username or password (or key decryption failed): {e}")
+            return (None, None, None) 
 
     else:
         print("Invalid username or password.")
-        return (False, None)
+        return (False, None, None) 
