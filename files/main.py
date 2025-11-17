@@ -9,7 +9,7 @@ from login import login, register
 import pki
 
 DB_FILE = 'users.json'
-CA_CERT_FILE = 'cacert.pem' # The path to your CA's public certificate
+CA_CERT_FILE = 'aclcert.pem' # The path to your CA's public certificate
 
 def load_db():
     try:
@@ -95,9 +95,11 @@ def main_menu():
     while True:
         if logged_in_user:
             print(f"\n--- Menu (Logged in as: {logged_in_user['username']}) ---")
+            print(f"Current Balance: {current_balance}")
+            print("---------------------------------------")
             print("1. Play Blackjack")
-            print("2. Check Balance")
-            print("3. Logout")
+            print("2. Add Balance")
+            print("3. Logout (Save & Exit)")
             print("---------------------------------------")
             choice = input("Enter your choice: ").strip()
 
@@ -106,7 +108,18 @@ def main_menu():
                 current_balance = play_blackjack_game(current_balance)
 
             elif choice == '2':
-                print(f"Your current balance is: {current_balance}")
+                try:
+                    amount_str = input("Enter amount to add: ")
+                    amount_to_add = float(amount_str)
+                    
+                    if amount_to_add > 0:
+                        current_balance += amount_to_add
+                        print(f"Successfully added {amount_to_add}.")
+                        print(f"Your new balance is now: {current_balance}")
+                    else:
+                        print("Amount must be positive.")
+                except ValueError:
+                    print("Invalid amount. Please enter a number.")
 
             elif choice == '3':
                 print(f"Saving balance for {logged_in_user['username']}...")
@@ -194,7 +207,7 @@ def main_menu():
                                 logged_in_user = None
 
                         else:
-                            print("ERROR: User certificate verification failed! It may be tampered with or not signed by our CA.")
+                            print("ERROR: User certificate verification failed! It may be tamper with or not signed by our CA.")
 
                     except Exception as e:
                         print(f"An unexpected error occurred during certificate verification: {e}")
