@@ -73,12 +73,7 @@ def main_menu():
 
             if choice == '1':
                 print("Starting Blackjack...")
-                # --- This is where you would call your game logic ---
-                # Example: current_balance = play_game(current_balance)
-                
-                # For this demo, we'll just add 10 to the balance
-                current_balance += 10
-                print(f"You won 10! Your new balance is: {current_balance}")
+               current_balance = play_blackjack_game(current_balance)
             
             elif choice == '2':
                 print(f"Your current balance is: {current_balance}")
