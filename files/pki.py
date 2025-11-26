@@ -143,5 +143,32 @@ def verify_certificate_signature(cert_to_verify, issuer_public_key):
     except Exception as e:
         print(f"Certificate verification failed: {e}")
         return False
+        
+def rsa_encrypt_key(public_key, key_bytes):
+    """
+    Encrypts a small piece of data (like an AES key) using the Public Key.
+    """
+    ciphertext = public_key.encrypt(
+        key_bytes,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return ciphertext.hex()
 
-
+def rsa_decrypt_key(private_key, ciphertext_hex):
+    """
+    Decrypts the AES key using the Private Key.
+    """
+    ciphertext = bytes.fromhex(ciphertext_hex)
+    plaintext = private_key.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return plaintext
