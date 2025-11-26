@@ -55,10 +55,7 @@ def drawCard():
     if not deck:
         print("Reshuffling the deck...")
         deck = createDeck()
-        # In a real scenario, you'd re-shuffle with new seeds, but for this
-        # simple version, we'll just re-create.
-        # For a provably fair system, you'd need a new shuffle here.
-        # For now, we'll just repopulate.
+
     
     card = deck.pop()
     return card
@@ -130,7 +127,7 @@ def play_one_hand(current_balance_float, server_seed, client_seed, nonce):
     blackjackDealer = False
     blackjackPlayer = False
     
-    # --- Bet Validation ---
+
     while True:
         try:
             bet_str = input(f"\nYour balance: {current_balance_float}. How much to bet? (0 to quit hand): ")
