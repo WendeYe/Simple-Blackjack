@@ -116,11 +116,13 @@ def register():
         salt=key_salt,
         iterations=1_200_000,
     )
-    key = kdf2.derive(password.encode('utf-8'))
+    aes_key = os.urandom(32) # Generate random key
+    aesgcm = AESGCM(aes_key)
     p_balance = str(0.0).encode('utf-8')
-    aesgcm = AESGCM(key)
-    nonce = os.urandom(16) # 16 byte nonce
+    nonce = os.urandom(16)
     encrypted_balance = aesgcm.encrypt(nonce, p_balance, None)
+    
+    encrypted_aes_key_hex = pki.rsa_encrypt_key(rsa_public, aes_key)
 
     new_user = {
         "id": next_id,
@@ -130,6 +132,7 @@ def register():
         "key_salt": key_salt.hex(),
         "encrypted_balance": encrypted_balance.hex(),
         "bal_nonce": nonce.hex(),
+        "encrypted_aes_key": encrypted_aes_key_hex,
         "user_certificate_pem": user_cert_pem,
         "rsa_private_key_pem": pem_private_encrypted,
         "last_balance_signature": None
