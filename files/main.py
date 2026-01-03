@@ -119,7 +119,7 @@ def main_menu():
             print("---------------------------------------")
             print("1. Play Blackjack")
             print("2. Add Balance")
-            print("3. Logout (Save & Exit)")
+            print("3. Log out (Save & Exit)")
             print("---------------------------------------")
             choice = input("Enter your choice: ").strip()
 
