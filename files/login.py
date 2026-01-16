@@ -75,8 +75,8 @@ def register():
 
     print("\n--- ACTION REQUIRED ---")
     print(f"A CSR file named '{csr_filename}' has been created.")
-    print("1. Take this file to your OpenSSL CA.")
-    print(f"2. Run: openssl ca -in {csr_filename} -out {username}_cert.pem -config openssl_CA1.cnf")
+    print(f"1. Take this file to your OpenSSL CA.")
+    print(f"2. Run: openssl ca -in {csr_filename} -out {username}_cert.pem -config openssl_AC1.cnf -policy policy_anything") 
     print(f"3. Place the generated '{username}_cert.pem' file in this directory.")
     input("Press Enter after you have done this...")
 
