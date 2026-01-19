@@ -105,7 +105,6 @@ def main_menu():
     current_rsa_key = None  
     current_balance = None
 
-    # In main.py
     try:
         ca_cert = pki.load_certificate_from_pem_file(CA_CERT_FILE)
         
