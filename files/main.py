@@ -112,7 +112,6 @@ def main_menu():
         # Verify Self-Signed Integrity
         public_key = ca_cert.public_key()
         
-        # We try to verify using the pki.py function first (Consistency)
         try:
             # We treat the CA as both the "Cert to verify" and the "Issuer"
             pki.verify_certificate_signature(ca_cert, public_key)
