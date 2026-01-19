@@ -105,9 +105,23 @@ def main_menu():
     current_rsa_key = None  
     current_balance = None
 
+    # In main.py
     try:
         ca_cert = pki.load_certificate_from_pem_file(CA_CERT_FILE)
-        print("CA Root Certificate loaded.")
+        
+        # Verify Self-Signed Integrity
+        public_key = ca_cert.public_key()
+        
+        # We try to verify using the pki.py function first (Consistency)
+        try:
+            # We treat the CA as both the "Cert to verify" and the "Issuer"
+            pki.verify_certificate_signature(ca_cert, public_key)
+            print("Integrity Check: Root CA is valid and self-signed.")
+        except Exception as e:
+            print(f"\n[DEBUG] Verification failed: {e}")
+            print("FATAL: Root CA file is corrupted or forged!")
+            exit()
+            
     except FileNotFoundError:
         print(f"FATAL ERROR: CA certificate '{CA_CERT_FILE}' not found. The application cannot run.")
         return
