@@ -118,7 +118,6 @@ def main_menu():
             pki.verify_certificate_signature(ca_cert, public_key)
             print("Integrity Check: Root CA is valid and self-signed.")
         except Exception as e:
-            print(f"\n[DEBUG] Verification failed: {e}")
             print("FATAL: Root CA file is corrupted or forged!")
             exit()
             
